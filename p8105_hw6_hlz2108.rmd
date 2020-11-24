@@ -1,0 +1,37 @@
+---
+title: "HW 6 for P8105 - hlz2108"
+author: "Helen Zhang"
+date: "November 24, 2020"
+output: github_document
+---
+Below is the code for setup:
+
+```{r setup}
+library(tidyverse)
+library(dplyr)
+library(readxl)
+library(ggplot2)
+library(p8105.datasets)
+library(patchwork)
+
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+scale_colour_discrete = scale_color_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+## Problem 0
+
+This “problem” focuses on structure of your submission, especially the use git and GitHub for reproducibility, R Projects to organize your work, R Markdown to write reproducible reports, relative paths to load data from local files, and reasonable naming structures for your files.
+
+## Problem 1
+
+
