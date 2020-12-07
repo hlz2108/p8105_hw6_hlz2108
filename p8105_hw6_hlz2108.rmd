@@ -242,21 +242,49 @@ boot_results =
     models = map(.x = strap_sample, ~lm(tmax ~ tmin, data = .x)), 
     results = map(models, broom::glance)
   ) %>%
-  select(strap_number, results)
+  select(strap_number, results) %>% 
   unnest(results)
 ```
+
+R-Squared
 
 ```{r r_squared}
 boot_results %>%
   ggplot(aes(x = adj.r.squared)) +
   geom_density() +
   labs(
-        title = "Distribution of R^2",
-        x = R^2
+        title = "Distribution of R Squared",
+        x = "R Squared"
     ) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
+The distribution of R squared appears to follow a normal distribution.
+
+The 95% CI of adjusted R square is: (`r quantile(boot_results$adj.r.squared, probs=0.025)` , `r quantile(boot_results$adj.r.squared, probs=0.975)`).
+
+Log Function
+
+```{r}
+
+```
+
+
+```{r second_bootstrap}
+second_bootstrap = weather_df %>% 
+  bootstrap(5000, id = "strap_number") %>% 
+  mutate(
+    models = map(.x = strap, ~lm(tmax ~ tmin, data = .x)), 
+    results = map(models, broom::tidy)
+  ) %>% 
+  select(strap_number, results) %>% 
+  unnest(results) %>% view
+  group_by(term) %>% 
+  summarize(
+    mean_est = mean(estimate),
+    sd_est = sd(estimate)
+  )
+```
 
 simple linear regression with tmax = Y and tmin as the X 
 
