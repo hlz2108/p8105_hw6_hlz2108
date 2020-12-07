@@ -125,24 +125,83 @@ purrr::map(birthweight_df, ~ sum(is.na(.)))
 
 This dataset contains `r nrow(birthweight_df)` rows and `r ncol(birthweight_df)` columns, there is no missing data.
 
-```{r}
-model_fit = lm(bwt ~ gaweeks, data = birthweight_df)
+For the regression model, I chose several hypothesized variables that I believe may affect birthright along with variables that have be determined from previous research and literature.
 
-birthweight_df %>% 
-  modelr::add_residuals(model_fit) %>% 
-  ggplot(aes(x = gaweeks, y = resid)) + 
-  geom_point()
+A quick Google search lead me to this (Wikipedia)[https://en.wikipedia.org/wiki/Low_birth_weight] article, which indicated that several risk factors in the mother that may contribute to low birth weight include young ages, multiple pregnancies (parity), and previous LBW infants. As such, I included mom age, parity, and previous number of low birthweight infants in the model.
+
+Gestational weeks and presence of malformations appear to be an logical indicator of birthweight and was included in the model as such. 
+
+I was also interested in whether several socialdemographic factors would affect birthweight, so I included factors such as mom's race and financial income.
+
+```{r regression_model_1}
+model_fit_1 = lm(bwt ~ gaweeks + momage + mrace + malform + parity + fincome + pnumlbw, data = birthweight_df)
 ```
 
-Copy cross-validation code
 
-Propose a regression model for birthweight. This model may be based on a hypothesized structure for the factors that underly birthweight, on a data-driven model-building process, or a combination of the two. Describe your modeling process and show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
+```{r residual_plot}
+birthweight_df %>% 
+  modelr::add_residuals(model_fit_1) %>%
+  modelr::add_predictions(model_fit_1) %>% 
+  ggplot(aes(x = pred, y = resid)) + 
+  geom_point(alpha = 0.3) +
+  geom_smooth(se = F, color = "red", method = "lm")
+  labs(
+    title = "Predicted vs. Residuals",
+    x = "Predicted",
+    y = "Residuals"
+    ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
 
-Compare your model to two others:
+Fit other models.
 
-One using length at birth and gestational age as predictors (main effects only)
-One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
-Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate.
+```{r model_building}
+model_2 = lm(bwt ~ gaweeks + blength, data = birthweight_df)
+model_3 = lm(bwt ~ bhead + blength + babysex + bhead * blength + bhead * babysex + blength * babysex + bhead * blength * babysex, data = birthweight_df)
+```
+
+Cross Validaton:
+
+```{r cv_df}
+cv_df = 
+  crossv_mc(birthweight_df, 100) %>% 
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble)
+  )
+
+cv_df = 
+  cv_df %>% 
+  mutate(
+   model_fit_1 = map(.x = train, ~lm(bwt ~ gaweeks + momage + mrace + malform + parity + fincome + pnumlbw, data = .x)),
+   model_2 = map(.x = train, ~lm(bwt ~ gaweeks + blength, data = .x)),
+   model_3 = map(.x = train, ~lm(bwt ~ bhead + blength + babysex + bhead * blength + bhead * babysex + blength * babysex + bhead * blength * babysex, data = .x))
+  ) %>% 
+  mutate(
+    rmse_model1 = map2_dbl(.x = model_fit_1, .y = test, ~rmse(model = .x, data = .y)),
+    rmse_model2 = map2_dbl(.x = model_2, .y = test, ~rmse(model = .x, data = .y)),
+    rmse_model3 = map2_dbl(.x = model_3, .y = test, ~rmse(model = .x, data = .y))
+  )
+```
+
+Violin plot of RMSEs
+
+```{r violin_plot}
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(
+    everything(),
+    names_to = "model",
+    values_to = "rmse",
+    names_prefix = "rmse_"
+  ) %>% 
+  ggplot(aes(x = model, y = rmse)) +
+  geom_violin()
+```
+
+From the RMSE plot, it appears that model 3 is the best fit as it has the lowest RSME. 
+
+Model 3 contains head circumference, length, sex, and all interactions (including the three-way interaction) between these.
 
 ## Problem 3
 
@@ -164,5 +223,7 @@ The bootstrap is helpful when you’d like to perform inference for a parameter 
 
 r̂ 2
 log(β̂ 0∗β̂ 1)
-Use 5000 bootstrap samples and, for each bootstrap sample, produce estimates of these two quantities. Plot the distribution of your estimates, and describe these in words. Using the 5000 bootstrap estimates, identify the 2.5% and 97.5% quartiles to provide a 95% confidence interval for r̂ 2 and log(β̂ 0∗β̂ 1). Note: broom::glance() is helpful for extracting r̂ 2 from a fitted regression, and broom::tidy() (with some additional wrangling) should help in computing log(β̂ 0∗β̂ 1).
+Use 5000 bootstrap samples and, for each bootstrap sample, produce estimates of these two quantities. Plot the distribution of your estimates, and describe these in words. Using the 5000 bootstrap estimates, identify the 2.5% and 97.5% quartiles to provide a 95% confidence interval for r̂ 2 and log(β̂ 0∗β̂ 1). 
+
+Note: broom::glance() is helpful for extracting r̂ 2 from a fitted regression, and broom::tidy() (with some additional wrangling) should help in computing log(β̂ 0∗β̂ 1).
 
