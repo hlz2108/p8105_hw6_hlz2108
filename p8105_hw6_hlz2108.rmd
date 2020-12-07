@@ -219,6 +219,8 @@ weather_df =
 ```
 
 ```{r bootsample}
+set.seed(2222)
+
 boot_sample = function(df) {
 
   sample_frac(df, replace = TRUE)
