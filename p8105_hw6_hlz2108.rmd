@@ -127,7 +127,7 @@ This dataset contains `r nrow(birthweight_df)` rows and `r ncol(birthweight_df)`
 
 For the regression model, I chose several hypothesized variables that I believe may affect birthright along with variables that have be determined from previous research and literature.
 
-A quick Google search lead me to this (Wikipedia)[https://en.wikipedia.org/wiki/Low_birth_weight] article, which indicated that several risk factors in the mother that may contribute to low birth weight include young ages, multiple pregnancies (parity), and previous LBW infants. As such, I included mom age, parity, and previous number of low birthweight infants in the model.
+A quick Google search lead me to this Wikipedia article [https://en.wikipedia.org/wiki/Low_birth_weight], which indicated that several risk factors in the mother that may contribute to low birth weight include young ages, multiple pregnancies (parity), and previous LBW infants. As such, I included mom age, parity, and previous number of low birthweight infants in the model.
 
 Gestational weeks and presence of malformations appear to be an logical indicator of birthweight and was included in the model as such. 
 
@@ -136,7 +136,6 @@ I was also interested in whether several socialdemographic factors would affect 
 ```{r regression_model_1}
 model_fit_1 = lm(bwt ~ gaweeks + momage + mrace + malform + parity + fincome + pnumlbw, data = birthweight_df)
 ```
-
 
 ```{r residual_plot}
 birthweight_df %>% 
@@ -153,16 +152,16 @@ birthweight_df %>%
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-Fit other models.
+### Fit other models.
 
 ```{r model_building}
 model_2 = lm(bwt ~ gaweeks + blength, data = birthweight_df)
 model_3 = lm(bwt ~ bhead + blength + babysex + bhead * blength + bhead * babysex + blength * babysex + bhead * blength * babysex, data = birthweight_df)
 ```
 
-Cross Validaton:
+### Cross Validaton:
 
-```{r cv_df}
+```{r cv_df, warning=FALSE}
 cv_df = 
   crossv_mc(birthweight_df, 100) %>% 
   mutate(
@@ -184,7 +183,7 @@ cv_df =
   )
 ```
 
-Violin plot of RMSEs
+### Violin plot of RMSEs
 
 ```{r violin_plot}
 cv_df %>% 
@@ -234,8 +233,6 @@ boot_straps =
     strap_sample = rerun(5000, boot_sample(weather_df))
   )
 
-boot_straps
-
 boot_results = 
   boot_straps %>% 
   mutate(
@@ -246,7 +243,7 @@ boot_results =
   unnest(results)
 ```
 
-R-Squared
+### R-Squared
 
 ```{r r_squared}
 boot_results %>%
@@ -259,16 +256,11 @@ boot_results %>%
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-The distribution of R squared appears to follow a normal distribution.
+The distribution of R squared appears to follow a normal distribution, centered around ~0.912.
 
-The 95% CI of adjusted R square is: (`r quantile(boot_results$adj.r.squared, probs=0.025)` , `r quantile(boot_results$adj.r.squared, probs=0.975)`).
+The 95% CI of adjusted R square is (`r quantile(boot_results$adj.r.squared, probs=0.025)`, `r quantile(boot_results$adj.r.squared, probs=0.975)`).
 
-Log Function
-
-```{r}
-
-```
-
+### Log Function
 
 ```{r second_bootstrap}
 second_bootstrap = weather_df %>% 
@@ -278,21 +270,33 @@ second_bootstrap = weather_df %>%
     results = map(models, broom::tidy)
   ) %>% 
   select(strap_number, results) %>% 
-  unnest(results) %>% view
-  group_by(term) %>% 
-  summarize(
-    mean_est = mean(estimate),
-    sd_est = sd(estimate)
+  unnest(results) %>% 
+  select(term, estimate) %>%
+  pivot_wider(
+    names_from = term,
+    values_from = estimate
+  ) %>% 
+  unnest(cols = c(`(Intercept)`, tmin)) %>%
+  rename(
+    beta_0 = "(Intercept)",
+    beta_1 = tmin
+  ) %>% 
+ mutate(
+    log_fx = log(beta_0*beta_1)
   )
 ```
 
-simple linear regression with tmax = Y and tmin as the X 
+```{r log_plot}
+second_bootstrap %>%
+  ggplot(aes(x = log_fx)) +
+  geom_density() +
+  labs(
+        title = "Distribution of Log Function",
+        x = "Log Function"
+    ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
 
-distribution of two quantities estimated from these data
+The log function plot also appears to follow a normal distribution, centered around ~2.015.
 
-r̂ 2
-log(β̂ 0∗β̂ 1)
-Use 5000 bootstrap samples and, for each bootstrap sample, produce estimates of these two quantities. Plot the distribution of your estimates, and describe these in words. Using the 5000 bootstrap estimates, identify the 2.5% and 97.5% quartiles to provide a 95% confidence interval for r̂ 2 and log(β̂ 0∗β̂ 1). 
-
-Note: broom::glance() is helpful for extracting r̂ 2 from a fitted regression, and broom::tidy() (with some additional wrangling) should help in computing log(β̂ 0∗β̂ 1).
-
+The 95% CI of adjusted R square is (`r quantile(second_bootstrap$log_fx, probs=0.025)`, `r quantile(second_bootstrap$log_fx, probs=0.975)`).
