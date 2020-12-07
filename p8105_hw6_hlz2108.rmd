@@ -199,9 +199,9 @@ cv_df %>%
   geom_violin()
 ```
 
-From the RMSE plot, it appears that model 3 is the best fit as it has the lowest RSME. 
+From the RMSE plot, it appears that of the 3 models, model 3 is the best fit as it has the lowest RSME. As expected, the model 1 (the model generated from Wikipedia knowledge) was a poor fit for the data and it is best not to rely on Wikipedia information.
 
-Model 3 contains head circumference, length, sex, and all interactions (including the three-way interaction) between these.
+Model 3 contains head circumference, length, sex, and all interactions (including the three-way interaction) between these. 
 
 ## Problem 3
 
@@ -219,7 +219,48 @@ weather_df =
   select(name, id, everything())
 ```
 
-The bootstrap is helpful when you’d like to perform inference for a parameter / value / summary that doesn’t have an easy-to-write-down distribution in the usual repeated sampling framework. We’ll focus on a simple linear regression with tmax as the response and tmin as the predictor, and are interested in the distribution of two quantities estimated from these data:
+```{r bootsample}
+boot_sample = function(df) {
+
+  sample_frac(df, replace = TRUE)
+
+}
+```
+
+```{r bootstrapping}
+boot_straps = 
+  data_frame(
+    strap_number = 1:5000,
+    strap_sample = rerun(5000, boot_sample(weather_df))
+  )
+
+boot_straps
+
+boot_results = 
+  boot_straps %>% 
+  mutate(
+    models = map(.x = strap_sample, ~lm(tmax ~ tmin, data = .x)), 
+    results = map(models, broom::glance)
+  ) %>%
+  select(strap_number, results)
+  unnest(results)
+```
+
+```{r r_squared}
+boot_results %>%
+  ggplot(aes(x = adj.r.squared)) +
+  geom_density() +
+  labs(
+        title = "Distribution of R^2",
+        x = R^2
+    ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+simple linear regression with tmax = Y and tmin as the X 
+
+distribution of two quantities estimated from these data
 
 r̂ 2
 log(β̂ 0∗β̂ 1)
